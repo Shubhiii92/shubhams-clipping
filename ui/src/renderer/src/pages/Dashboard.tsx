@@ -415,10 +415,10 @@ export default function Dashboard({
         </p>
         <h2 id="clipping-heading">{t('Turn your best plays')}<br /><span>{t('into shareable clips.')}</span></h2>
         <p className="clipping-description">
-          {t('Paste a YouTube, Twitch, or Kick link. Find the highlights locally and download Full HD clips with captions.')}
+          {t('Paste a YouTube, Twitch, or Kick link to make Full HD clips.')}
         </p>
         <div className="clipping-generator">
-          <AddVideos onAdded={refresh} />
+          <AddVideos onAdded={refresh} compact />
           <ProcessingBar />
         </div>
         {settings && <p className="clipping-model">{t('Active model')} · {settings.model}</p>}

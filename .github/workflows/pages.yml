@@ -26,6 +26,7 @@ concurrency:
 
 jobs:
   deploy:
+    if: github.repository == 'ColinGPT9/clips-studio'
     runs-on: ubuntu-latest
     environment:
       name: github-pages

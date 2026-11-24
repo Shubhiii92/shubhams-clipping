@@ -17,6 +17,7 @@ exports/
 # are ignored by the *.mp4 rule above: present on the machine that generated
 # them, absent from every clone and from the release build.
 !assets/outro/*.mp4
+!docs/preview/sample.mp4
 
 # Secrets — never commit these (each user creates their own)
 config/client_secret.json

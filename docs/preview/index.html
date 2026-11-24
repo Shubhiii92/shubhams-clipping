@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="description" content="Preview Shubham’s Clipping and download a Full HD sample.">
+  <title>Shubham’s Clipping</title>
+  <link rel="stylesheet" href="style.css">
+  <script defer src="preview.js"></script>
+</head>
+<body>
+  <header class="bar">
+    <a class="brand" href="./">Shubham’s <strong>Clipping</strong></a>
+    <a href="https://github.com/Shubhiii92/shubhams-clipping">Source &amp; setup</a>
+  </header>
+  <main>
+    <section class="hero" aria-labelledby="title">
+      <p class="welcome">Welcome to Shubham’s Clipping</p>
+      <h1 id="title">Turn your best plays<br><em>into shareable clips.</em></h1>
+      <p class="intro">Pick a vertical format and download a Full HD sample from the clipper.</p>
+      <div class="picker">
+        <fieldset>
+          <legend>Clip format</legend>
+          <div class="formats">
+            <label><input type="radio" name="format" value="instagram-reel" checked> Instagram Reels</label>
+            <label><input type="radio" name="format" value="youtube-short"> YouTube Shorts</label>
+          </div>
+        </fieldset>
+        <p id="specs">1080 × 1920 · 9:16 · MP4</p>
+        <a class="primary" id="download" href="sample.mp4" download="shubhams-clipping-instagram-reel.mp4">Download Full HD sample</a>
+      </div>
+      <p class="note">This is the hosted preview. To process your own videos, run the clipper on your Mac.</p>
+    </section>
+    <section class="sample" aria-labelledby="sample-title">
+      <h2 id="sample-title">Sample clip</h2>
+      <video src="sample.mp4" controls playsinline preload="none" aria-label="Sample clip with burned-in captions"></video>
+    </section>
+  </main>
+  <footer>Built on <a href="https://github.com/ColinGPT9/clips-studio">Clips Kitty</a> · AGPL-3.0</footer>
+</body>
+</html>

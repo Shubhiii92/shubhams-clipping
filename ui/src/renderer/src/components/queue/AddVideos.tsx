@@ -402,8 +402,17 @@ function loadDraft(): Slot[] {
  *
  *  Every row owns its own options object, so toggling video 2 writes video 2
  *  and nothing else. */
-export default function AddVideos({ onAdded }: { onAdded?: () => void }): JSX.Element {
+export default function AddVideos({
+  onAdded,
+  compact = false
+}: {
+  onAdded?: () => void
+  compact?: boolean
+}): JSX.Element {
   const [slots, setSlots] = useState<Slot[]>(loadDraft)
+  const [showOptions, setShowOptions] = useState(false)
+  const [format, setFormat] = useState<'reels' | 'shorts' | ''>('')
+  const canPickFiles = window.studio.platform !== 'browser'
   const [channel, setChannel] = useState(localStorage.getItem('upload-channel') ?? '')
   const [openStyle, setOpenStyle] = useState<string | null>(null)
   // The row whose Gaming / Reaction split is being set up, on its own frames.
@@ -948,6 +957,14 @@ export default function AddVideos({ onAdded }: { onAdded?: () => void }): JSX.El
     }
   }
 
+  const selectVerticalFormat = (next: 'reels' | 'shorts'): void => {
+    setFormat(next)
+    setSlots(slots.map((slot) => slot.options.longform
+      ? { ...slot, options: toggle(slot.options, 'longform', false) }
+      : slot))
+  }
+  const optionsExpanded = !compact || showOptions || settingsBad
+
   return (
     <div className="space-y-3">
       <div className="card space-y-2">
@@ -979,86 +996,90 @@ export default function AddVideos({ onAdded }: { onAdded?: () => void }): JSX.El
                 />
               )}
 
-              <label
-                className="flex items-center gap-2 cursor-pointer text-sm shrink-0 whitespace-nowrap"
-                title={t("Burn captions into this video’s clips")}
-              >
-                <input
-                  type="checkbox"
-                  className="size-4 accent-[#38BDF8]"
-                  checked={slot.options.captions !== false}
-                  onChange={(e) =>
-                    replaceOptions(slot.key, toggle(slot.options, 'captions', e.target.checked))
-                  }
-                />
-                {t('Captions')}
-              </label>
-
-              {/* Immediately beside Captions: it configures that switch. */}
-              <button
-                className="btn-ghost shrink-0"
-                onClick={() => setOpenStyle(openStyle === slot.key ? null : slot.key)}
-                aria-expanded={openStyle === slot.key}
-                disabled={slot.options.captions === false}
-              >
-                {t('Caption style')} {openStyle === slot.key ? '▾' : '▸'}
-              </button>
-
-              {TOGGLES.map((tg) => {
-                // Sports shows once the engine says it has a sport (and stays
-                // while it's on, so it can always be turned off).
-                if (tg.key === 'sport' && offered.length === 0 && !slot.options.sport) return null
-                // Pipeline likewise: only once a community pipeline is installed and on.
-                if (tg.key === 'pipeline' && (slot.options.gaming || (usable.length === 0 && !slot.options.pipeline))) return null
-                // Rate & understand likewise: once a plugin that can rate or understand is.
-                if (tg.key === 'steps' && stepUsable.length === 0 && !hasSteps(slot.options)) return null
-                if (tg.key === 'steps' && !slot.options.gaming && stepUsable.every((p) => p.category === 'gaming') && !hasSteps(slot.options)) return null
-                // Suggest edits likewise: once a plugin that can suggest edits is.
-                if (tg.key === 'edit' && editUsable.length === 0 && !slot.options.edit?.length) return null
-                if (tg.key === 'edit' && !slot.options.gaming && editUsable.every((p) => p.category === 'gaming') && !slot.options.edit?.length) return null
-                // Watermark needs a saved branding profile to point at. Without
-                // one there is nothing to burn in, so the box could be ticked
-                // and would simply un-tick itself — which reads as a broken
-                // checkbox. Disable it and say what is missing instead.
-                const needsProfile = tg.key === 'watermark' && !watermarkSelection().profileId
-                // Rate & understand the same way, when the only plugin that
-                // could do it is this video's Pipeline: the API refuses a
-                // pipeline named again, so ticking would do nothing.
-                const onlyThePipeline =
-                  tg.key === 'steps' && !hasSteps(slot.options) && !firstStepPlugin(stepUsable, slot.options)
-                const disabled = needsProfile || onlyThePipeline
-                const label = (
-                  <label
-                    key={tg.key}
-                    className={`flex items-center gap-2 text-sm shrink-0 whitespace-nowrap ${
-                      disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'
-                    }`}
-                    title={
-                      needsProfile
-                        ? 'Create a branding profile below first — there is no logo to burn in yet.'
-                        : onlyThePipeline
-                          ? t(
-                              'The only plugin you can use to rate or understand moments is this video’s Pipeline, and it can’t also be chosen here. Install or turn on another one in the Marketplace, or choose a different Pipeline.'
-                            )
-                          : tg.title
+              <div className={!optionsExpanded ? 'hidden' : compact ? 'flex w-full flex-wrap items-center gap-3' : 'contents'}>
+                <label
+                  className="flex items-center gap-2 cursor-pointer text-sm shrink-0 whitespace-nowrap"
+                  title={t("Burn captions into this video’s clips")}
+                >
+                  <input
+                    type="checkbox"
+                    className="size-4 accent-[#38BDF8]"
+                    checked={slot.options.captions !== false}
+                    onChange={(e) =>
+                      replaceOptions(slot.key, toggle(slot.options, 'captions', e.target.checked))
                     }
-                  >
-                    <input
-                      type="checkbox"
-                      className="size-4 accent-[#38BDF8]"
-                      checked={isOn(slot.options, tg.key)}
-                      disabled={disabled}
-                      onChange={(e) => {
-                        replaceOptions(slot.key, toggle(slot.options, tg.key, e.target.checked))
-                        if (tg.key === 'gaming' && e.target.checked && (slot.path || slot.url.trim()))
-                          setSplitFor(slot.key)
-                      }}
-                    />
-                    {t(tg.label)} <span className="text-muted">{t(tg.hint)}</span>
-                  </label>
-                )
-                return label
-              })}
+                  />
+                  {t('Captions')}
+                </label>
+
+                {/* Immediately beside Captions: it configures that switch. */}
+                <button
+                  className="btn-ghost shrink-0"
+                  onClick={() => setOpenStyle(openStyle === slot.key ? null : slot.key)}
+                  aria-expanded={openStyle === slot.key}
+                  disabled={slot.options.captions === false}
+                >
+                  {t('Caption style')} {openStyle === slot.key ? '▾' : '▸'}
+                </button>
+
+                {TOGGLES.map((tg) => {
+                  // Sports shows once the engine says it has a sport (and stays
+                  // while it's on, so it can always be turned off).
+                  if (tg.key === 'sport' && offered.length === 0 && !slot.options.sport) return null
+                  // Pipeline likewise: only once a community pipeline is installed and on.
+                  if (tg.key === 'pipeline' && (slot.options.gaming || (usable.length === 0 && !slot.options.pipeline))) return null
+                  // Rate & understand likewise: once a plugin that can rate or understand is.
+                  if (tg.key === 'steps' && stepUsable.length === 0 && !hasSteps(slot.options)) return null
+                  if (tg.key === 'steps' && !slot.options.gaming && stepUsable.every((p) => p.category === 'gaming') && !hasSteps(slot.options)) return null
+                  // Suggest edits likewise: once a plugin that can suggest edits is.
+                  if (tg.key === 'edit' && editUsable.length === 0 && !slot.options.edit?.length) return null
+                  if (tg.key === 'edit' && !slot.options.gaming && editUsable.every((p) => p.category === 'gaming') && !slot.options.edit?.length) return null
+                  // Watermark needs a saved branding profile to point at. Without
+                  // one there is nothing to burn in, so the box could be ticked
+                  // and would simply un-tick itself — which reads as a broken
+                  // checkbox. Disable it and say what is missing instead.
+                  const needsProfile = tg.key === 'watermark' && !watermarkSelection().profileId
+                  // Rate & understand the same way, when the only plugin that
+                  // could do it is this video's Pipeline: the API refuses a
+                  // pipeline named again, so ticking would do nothing.
+                  const onlyThePipeline =
+                    tg.key === 'steps' && !hasSteps(slot.options) && !firstStepPlugin(stepUsable, slot.options)
+                  const disabled = needsProfile || onlyThePipeline
+                  const label = (
+                    <label
+                      key={tg.key}
+                      className={`flex items-center gap-2 text-sm shrink-0 whitespace-nowrap ${
+                        disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'
+                      }`}
+                      title={
+                        needsProfile
+                          ? 'Create a branding profile below first — there is no logo to burn in yet.'
+                          : onlyThePipeline
+                            ? t(
+                                'The only plugin you can use to rate or understand moments is this video’s Pipeline, and it can’t also be chosen here. Install or turn on another one in the Marketplace, or choose a different Pipeline.'
+                              )
+                            : tg.title
+                      }
+                    >
+                      <input
+                        type="checkbox"
+                        className="size-4 accent-[#38BDF8]"
+                        checked={isOn(slot.options, tg.key)}
+                        disabled={disabled}
+                        onChange={(e) => {
+                          replaceOptions(slot.key, toggle(slot.options, tg.key, e.target.checked))
+                          if (tg.key === 'longform' && e.target.checked) setFormat('')
+                          if (tg.key === 'gaming' && e.target.checked && (slot.path || slot.url.trim()))
+                            setSplitFor(slot.key)
+                        }}
+                      />
+                      {t(tg.label)} <span className="text-muted">{t(tg.hint)}</span>
+                    </label>
+                  )
+                  return label
+                })}
+
+              </div>
 
               {/* Always removable once it holds something. Hiding this on the
                   last row trapped a single uploaded file: its name is not an
@@ -1082,264 +1103,289 @@ export default function AddVideos({ onAdded }: { onAdded?: () => void }): JSX.El
               )}
             </div>
 
-            {slot.options.sport && offered.length > 0 && (
-              <div className="flex items-center gap-3 flex-wrap mt-2">
-                <SportFields
-                  value={slot.options.sport}
-                  sports={offered}
-                  remember
-                  name={`${n + 1}`}
-                  noCrop={Boolean(slot.options.vertical_live)}
-                  onChange={(sport) => patchOptions(slot.key, { sport })}
-                />
-              </div>
-            )}
-
-            {slot.options.gaming && (
-              <div className="flex items-center gap-3 flex-wrap mt-2">
-                <PipelineFields
-                  value={slot.options.pipeline ?? { id: '' }}
-                  pipelines={pipelines?.filter((p) => p.category === 'gaming' || p.id === slot.options.pipeline?.id) ?? null}
-                  label={t('Gaming detector')}
-                  defaultChoiceLabel={t('All games (Clips Kitty)')}
-                  showSettings={false}
-                  name={`${n + 1}`}
-                  onChange={(choice) => {
-                    const next = { ...slot.options }
-                    if (choice.id) {
-                      next.pipeline = choice
-                      delete next.gaming_scoring
-                    } else delete next.pipeline
-                    const done = withoutPipelineInSteps(next)
-                    rememberPlugins(done)
-                    replaceOptions(slot.key, done)
-                  }}
-                  onProblem={(bad) => setBadSettings((b) => ({ ...b, [slot.key]: bad }))}
-                />
-              </div>
-            )}
-
-            {slot.options.pipeline && !slot.options.gaming && (
-              <div className="flex items-center gap-3 flex-wrap mt-2">
-                <PipelineFields
-                  value={slot.options.pipeline}
-                  pipelines={pipelines?.filter((p) => p.category !== 'gaming') ?? null}
-                  name={`${n + 1}`}
-                  onChange={(pipeline) => patchPipeline(slot.key, pipeline)}
-                  onProblem={(bad) => setBadSettings((b) => ({ ...b, [slot.key]: bad }))}
-                />
-              </div>
-            )}
-
-            {hasSteps(slot.options) && (
-              <div className="flex items-center gap-3 flex-wrap mt-2">
-                <StepFields
-                  options={slot.options}
-                  plugins={stepPlugins}
-                  pipelines={pipelines}
-                  sports={offered}
-                  name={`${n + 1}`}
-                  onChange={(step, list) => setStep(slot.key, step, list)}
-                  onProblem={(step, id, bad) =>
-                    setBadSettings((b) => ({ ...b, [`${slot.key}:${step}:${id}`]: bad }))
-                  }
-                />
-              </div>
-            )}
-
-            {Boolean(slot.options.edit?.length) && (
-              <div className="flex items-center gap-3 flex-wrap mt-2">
-                <StepFields
-                  steps={['edit']}
-                  options={slot.options}
-                  plugins={editPlugins}
-                  pipelines={pipelines}
-                  sports={offered}
-                  name={`${n + 1}`}
-                  onChange={(step, list) => setStep(slot.key, step, list)}
-                  onProblem={(step, id, bad) =>
-                    setBadSettings((b) => ({ ...b, [`${slot.key}:${step}:${id}`]: bad }))
-                  }
-                />
-              </div>
-            )}
-
-            {/* What the live is: talking, a game, or a match (Sports). */}
-            {slot.options.vertical_live && (
-              <div className="flex items-center gap-3 flex-wrap mt-2">
-                <span className="label shrink-0">{t('Vertical Live content')}</span>
-                <select
-                  className="input !w-72"
-                  value={verticalValue(slot.options.sport) ?? (slot.options.gaming_scoring ? 'gaming' : 'standard')}
-                  onChange={(e) => setVerticalContent(slot, e.target.value)}
-                  aria-label={`${t('Vertical Live content')} ${n + 1}`}
-                  title={t('Gaming / reaction: what you say counts as on any stream, and in-game moments (a kill streak, a boss going down, a goal) and the reactions to them add to it, from chat and your voice, even when you say little. Game characters and people in a video you watch aren’t taken for you.')}
-                >
-                  <option value="standard">{t('Talking / IRL')}</option>
-                  <option value="gaming">{t('Gaming / reaction')}</option>
-                  {verticalSports(offered).map((s) => (
-                    <option key={s.value} value={s.value}>
-                      {t(s.label)}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            )}
-
-            {slot.options.longform && (
-              <div className="flex items-center gap-3 flex-wrap mt-2">
-                <span className="label shrink-0">{t('Longform output')}</span>
-                <select
-                  className="input !w-64"
-                  value={slot.options.longform.mode}
-                  onChange={(e) => {
-                    patchOptions(slot.key, { longform: { ...slot.options.longform, mode: e.target.value } })
-                    try {
-                      localStorage.setItem(PREF.longform_mode, e.target.value)
-                    } catch {
-                      // Not remembered for next time; this video still gets it.
-                    }
-                  }}
-                  aria-label={`Longform output type for video ${n + 1}`}
-                >
-                  <option value="short_clips">Short Clips (up to 60s, horizontal)</option>
-                  <option value="clips_140">Clips (up to 140s — X/Twitter)</option>
-                  <option value="highlights">Highlights (best-of, 8-20 min by quality)</option>
-                  <option value="edited_stream">Edited Stream (downtime removed)</option>
-                </select>
-                <label
-                  className="flex items-center gap-2 text-sm cursor-pointer"
-                  title={t(
-                    'Makes the vertical 9:16 Shorts of this video too, in the same run: the Shorts first, then the 16:9 output. The horizontal clips are marked 16:9.'
-                  )}
-                >
-                  <input
-                    type="checkbox"
-                    className="size-4 accent-[#38BDF8]"
-                    checked={Boolean(slot.options.longform.shorts)}
-                    onChange={(e) => setLongformShorts(slot, e.target.checked)}
+            <div hidden={!optionsExpanded}>
+              {slot.options.sport && offered.length > 0 && (
+                <div className="flex items-center gap-3 flex-wrap mt-2">
+                  <SportFields
+                    value={slot.options.sport}
+                    sports={offered}
+                    remember
+                    name={`${n + 1}`}
+                    noCrop={Boolean(slot.options.vertical_live)}
+                    onChange={(sport) => patchOptions(slot.key, { sport })}
                   />
-                  {t('Also make 9:16 Shorts')}
-                </label>
-              </div>
-            )}
+                </div>
+              )}
 
-            {openStyle === slot.key && slot.options.captions !== false && (
-              <div className="w-full space-y-3 border-t border-raised/60 pt-3 mt-2">
-                <p className="label">
-                  {t('Caption style for')} {slot.path ? slot.title || t('this file') : t('this video')}
-                </p>
-                <CaptionStyleControls
-                  idPrefix={`slot-${slot.key}`}
-                  style={slotStyle(slot)}
-                  onChange={setSlotStyle(slot)}
-                />
-              </div>
-            )}
+              {slot.options.gaming && (
+                <div className="flex items-center gap-3 flex-wrap mt-2">
+                  <PipelineFields
+                    value={slot.options.pipeline ?? { id: '' }}
+                    pipelines={pipelines?.filter((p) => p.category === 'gaming' || p.id === slot.options.pipeline?.id) ?? null}
+                    label={t('Gaming detector')}
+                    defaultChoiceLabel={t('All games (Clips Kitty)')}
+                    showSettings={false}
+                    name={`${n + 1}`}
+                    onChange={(choice) => {
+                      const next = { ...slot.options }
+                      if (choice.id) {
+                        next.pipeline = choice
+                        delete next.gaming_scoring
+                      } else delete next.pipeline
+                      const done = withoutPipelineInSteps(next)
+                      rememberPlugins(done)
+                      replaceOptions(slot.key, done)
+                    }}
+                    onProblem={(bad) => setBadSettings((b) => ({ ...b, [slot.key]: bad }))}
+                  />
+                </div>
+              )}
 
-            {slot.options.gaming && (
-              <div className="flex items-center gap-3 flex-wrap mt-2 text-xs">
-                <span className="label shrink-0">{t('Layout')}</span>
-                <span className="text-muted">
-                  {slot.options.gaming_layout
-                    ? `${t(PRESETS[slot.options.gaming_layout.preset ?? 'half']?.label ?? 'Split')}${
-                        slot.options.gaming_layout.order === 'game_top' &&
-                        PRESETS[slot.options.gaming_layout.preset ?? 'half']?.type === 'stack'
-                          ? ` · ${t('game on top')}`
-                          : ''
-                      }${slot.options.gaming_remember ? ` · ${t('remembered for the creator')}` : ''}`
-                    : t('Not chosen yet: pick a layout on the video’s own frames before processing.')}
-                </span>
+              {slot.options.pipeline && !slot.options.gaming && (
+                <div className="flex items-center gap-3 flex-wrap mt-2">
+                  <PipelineFields
+                    value={slot.options.pipeline}
+                    pipelines={pipelines?.filter((p) => p.category !== 'gaming') ?? null}
+                    name={`${n + 1}`}
+                    onChange={(pipeline) => patchPipeline(slot.key, pipeline)}
+                    onProblem={(bad) => setBadSettings((b) => ({ ...b, [slot.key]: bad }))}
+                  />
+                </div>
+              )}
+
+              {hasSteps(slot.options) && (
+                <div className="flex items-center gap-3 flex-wrap mt-2">
+                  <StepFields
+                    options={slot.options}
+                    plugins={stepPlugins}
+                    pipelines={pipelines}
+                    sports={offered}
+                    name={`${n + 1}`}
+                    onChange={(step, list) => setStep(slot.key, step, list)}
+                    onProblem={(step, id, bad) =>
+                      setBadSettings((b) => ({ ...b, [`${slot.key}:${step}:${id}`]: bad }))
+                    }
+                  />
+                </div>
+              )}
+
+              {Boolean(slot.options.edit?.length) && (
+                <div className="flex items-center gap-3 flex-wrap mt-2">
+                  <StepFields
+                    steps={['edit']}
+                    options={slot.options}
+                    plugins={editPlugins}
+                    pipelines={pipelines}
+                    sports={offered}
+                    name={`${n + 1}`}
+                    onChange={(step, list) => setStep(slot.key, step, list)}
+                    onProblem={(step, id, bad) =>
+                      setBadSettings((b) => ({ ...b, [`${slot.key}:${step}:${id}`]: bad }))
+                    }
+                  />
+                </div>
+              )}
+
+              {/* What the live is: talking, a game, or a match (Sports). */}
+              {slot.options.vertical_live && (
+                <div className="flex items-center gap-3 flex-wrap mt-2">
+                  <span className="label shrink-0">{t('Vertical Live content')}</span>
+                  <select
+                    className="input !w-72"
+                    value={verticalValue(slot.options.sport) ?? (slot.options.gaming_scoring ? 'gaming' : 'standard')}
+                    onChange={(e) => setVerticalContent(slot, e.target.value)}
+                    aria-label={`${t('Vertical Live content')} ${n + 1}`}
+                    title={t('Gaming / reaction: what you say counts as on any stream, and in-game moments (a kill streak, a boss going down, a goal) and the reactions to them add to it, from chat and your voice, even when you say little. Game characters and people in a video you watch aren’t taken for you.')}
+                  >
+                    <option value="standard">{t('Talking / IRL')}</option>
+                    <option value="gaming">{t('Gaming / reaction')}</option>
+                    {verticalSports(offered).map((s) => (
+                      <option key={s.value} value={s.value}>
+                        {t(s.label)}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
+
+              {slot.options.longform && (
+                <div className="flex items-center gap-3 flex-wrap mt-2">
+                  <span className="label shrink-0">{t('Longform output')}</span>
+                  <select
+                    className="input !w-64"
+                    value={slot.options.longform.mode}
+                    onChange={(e) => {
+                      patchOptions(slot.key, { longform: { ...slot.options.longform, mode: e.target.value } })
+                      try {
+                        localStorage.setItem(PREF.longform_mode, e.target.value)
+                      } catch {
+                        // Not remembered for next time; this video still gets it.
+                      }
+                    }}
+                    aria-label={`Longform output type for video ${n + 1}`}
+                  >
+                    <option value="short_clips">Short Clips (up to 60s, horizontal)</option>
+                    <option value="clips_140">Clips (up to 140s — X/Twitter)</option>
+                    <option value="highlights">Highlights (best-of, 8-20 min by quality)</option>
+                    <option value="edited_stream">Edited Stream (downtime removed)</option>
+                  </select>
+                  <label
+                    className="flex items-center gap-2 text-sm cursor-pointer"
+                    title={t(
+                      'Makes the vertical 9:16 Shorts of this video too, in the same run: the Shorts first, then the 16:9 output. The horizontal clips are marked 16:9.'
+                    )}
+                  >
+                    <input
+                      type="checkbox"
+                      className="size-4 accent-[#38BDF8]"
+                      checked={Boolean(slot.options.longform.shorts)}
+                      onChange={(e) => setLongformShorts(slot, e.target.checked)}
+                    />
+                    {t('Also make 9:16 Shorts')}
+                  </label>
+                </div>
+              )}
+
+              {openStyle === slot.key && slot.options.captions !== false && (
+                <div className="w-full space-y-3 border-t border-raised/60 pt-3 mt-2">
+                  <p className="label">
+                    {t('Caption style for')} {slot.path ? slot.title || t('this file') : t('this video')}
+                  </p>
+                  <CaptionStyleControls
+                    idPrefix={`slot-${slot.key}`}
+                    style={slotStyle(slot)}
+                    onChange={setSlotStyle(slot)}
+                  />
+                </div>
+              )}
+
+              {slot.options.gaming && (
+                <div className="flex items-center gap-3 flex-wrap mt-2 text-xs">
+                  <span className="label shrink-0">{t('Layout')}</span>
+                  <span className="text-muted">
+                    {slot.options.gaming_layout
+                      ? `${t(PRESETS[slot.options.gaming_layout.preset ?? 'half']?.label ?? 'Split')}${
+                          slot.options.gaming_layout.order === 'game_top' &&
+                          PRESETS[slot.options.gaming_layout.preset ?? 'half']?.type === 'stack'
+                            ? ` · ${t('game on top')}`
+                            : ''
+                        }${slot.options.gaming_remember ? ` · ${t('remembered for the creator')}` : ''}`
+                      : t('Not chosen yet: pick a layout on the video’s own frames before processing.')}
+                  </span>
+                    <button
+                      className="btn-ghost !py-1 shrink-0"
+                      disabled={!slot.path && !slot.url.trim()}
+                      title={!slot.path && !slot.url.trim() ? t('Paste a link or add a file first') : undefined}
+                      onClick={() => setSplitFor(slot.key)}
+                    >
+                      {slot.options.gaming_layout ? t('Change layout…') : t('Choose layout…')}
+                    </button>
+                  </div>
+                )}
+                {splitFor === slot.key && (
+                  <GamingLayoutEditor
+                    source={slot.path ? { path: slot.path } : { url: slot.url.trim() }}
+                    context="video"
+                    settings={slot.options.gaming_layout ?? {}}
+                    remember={Boolean(slot.options.gaming_remember)}
+                    onClose={() => setSplitFor(null)}
+                    onDone={(layout, remember) =>
+                      replaceOptions(slot.key, {
+                        ...slot.options,
+                        gaming_layout: layout,
+                        ...(remember ? { gaming_remember: true } : {}),
+                        ...(remember ? {} : { gaming_remember: undefined })
+                      })
+                    }
+                  />
+                )}
+                {slot.path && (
+                  <VerticalHint
+                    slot={slot}
+                    onUse={() => replaceOptions(slot.key, toggle(slot.options, 'vertical_live', true))}
+                  />
+                )}
+                {slot.path && slot.options.vertical_live && (
+                  <div className="flex items-center gap-3 flex-wrap mt-2">
+                    <span className="label shrink-0">{t('Original link')}</span>
+                    <input
+                      className="input !w-80 max-w-full"
+                      placeholder={t('Where the live was streamed (optional)')}
+                      aria-label={`Original link for video ${n + 1}`}
+                      value={slot.sourceUrl ?? ''}
+                      onChange={(e) => patch(slot.key, { sourceUrl: e.target.value })}
+                    />
+                  </div>
+                )}
+              </div>
+              {slot.error && <p className="text-sm text-error mt-1">{slot.error}</p>}
+            </div>
+          ))}
+
+          <div className="flex gap-2 items-center flex-wrap pt-1">
+            {compact && (
+              <>
+                <div className="flex flex-wrap gap-2" role="group" aria-label={t('Clip format')}>
+                  <button
+                    type="button"
+                    className="clipping-format"
+                    aria-pressed={format === 'reels'}
+                    onClick={() => selectVerticalFormat('reels')}
+                  >
+                    {t('Instagram Reels')}
+                  </button>
+                  <button
+                    type="button"
+                    className="clipping-format"
+                    aria-pressed={format === 'shorts'}
+                    onClick={() => selectVerticalFormat('shorts')}
+                  >
+                    {t('YouTube Shorts')}
+                  </button>
+                </div>
                 <button
-                  className="btn-ghost !py-1 shrink-0"
-                  disabled={!slot.path && !slot.url.trim()}
-                  title={!slot.path && !slot.url.trim() ? t('Paste a link or add a file first') : undefined}
-                  onClick={() => setSplitFor(slot.key)}
+                  type="button"
+                  className="btn-ghost"
+                  aria-expanded={optionsExpanded}
+                  onClick={() => setShowOptions(!showOptions)}
                 >
-                  {slot.options.gaming_layout ? t('Change layout…') : t('Choose layout…')}
+                  {t('Options')}
                 </button>
-              </div>
+              </>
             )}
-            {splitFor === slot.key && (
-              <GamingLayoutEditor
-                source={slot.path ? { path: slot.path } : { url: slot.url.trim() }}
-                context="video"
-                settings={slot.options.gaming_layout ?? {}}
-                remember={Boolean(slot.options.gaming_remember)}
-                onClose={() => setSplitFor(null)}
-                onDone={(layout, remember) =>
-                  replaceOptions(slot.key, {
-                    ...slot.options,
-                    gaming_layout: layout,
-                    ...(remember ? { gaming_remember: true } : {}),
-                    ...(remember ? {} : { gaming_remember: undefined })
-                  })
+            <div hidden={!optionsExpanded}>
+              <div className="flex gap-2 items-center flex-wrap">
+              <button
+                className="btn-ghost shrink-0"
+                onClick={addSlot}
+                disabled={full}
+                title={
+                  full
+                    ? `${t('The queue holds')} ${maxActive} ${t('videos at a time')}`
+                    : t('Add another video')
                 }
-              />
-            )}
-            {slot.path && (
-              <VerticalHint
-                slot={slot}
-                onUse={() => replaceOptions(slot.key, toggle(slot.options, 'vertical_live', true))}
-              />
-            )}
-            {slot.path && slot.options.vertical_live && (
-              <div className="flex items-center gap-3 flex-wrap mt-2">
-                <span className="label shrink-0">{t('Original link')}</span>
+              >
+                + {t('Add video')}
+              </button>
+              {canPickFiles && <button className="btn-ghost shrink-0" onClick={addFiles} disabled={full}>
+                <Folder className="mr-1.5" />
+                {t('Upload video file')}
+              </button>}
+              {hasFiles && (
                 <input
-                  className="input !w-80 max-w-full"
-                  placeholder={t('Where the live was streamed (optional)')}
-                  aria-label={`Original link for video ${n + 1}`}
-                  value={slot.sourceUrl ?? ''}
-                  onChange={(e) => patch(slot.key, { sourceUrl: e.target.value })}
+                  className="input !w-44 shrink-0"
+                  placeholder={t('Creator profile')}
+                  aria-label={t('Creator profile for uploaded files')}
+                  title={t('Leave blank to skip assigning a creator profile')}
+                  value={channel}
+                  onChange={(e) => {
+                    setChannel(e.target.value)
+                    localStorage.setItem('upload-channel', e.target.value)
+                  }}
                 />
-              </div>
-            )}
-            {slot.error && <p className="text-sm text-error mt-1">{slot.error}</p>}
+              )}
+            </div>
           </div>
-        ))}
-
-        <div className="flex gap-3 items-center flex-wrap pt-1">
-          <button
-            className="btn-ghost shrink-0"
-            onClick={addSlot}
-            disabled={full}
-            title={
-              full
-                ? `${t('The queue holds')} ${maxActive} ${t('videos at a time')}`
-                : t('Add another video')
-            }
-          >
-            + {t('Add video')}
-          </button>
-          <button className="btn-ghost shrink-0" onClick={addFiles} disabled={full}>
-            <Folder className="mr-1.5" />
-            {t('Upload video file')}
-          </button>
-          {/* Greyed out until there is an upload, the same way Caption style
-              is greyed out until Captions is ticked. A downloaded video takes
-              its channel from the source metadata; only a file off your
-              computer has nobody to file it under.
-
-              Shown blank while disabled: a greyed-out box still displaying the
-              last creator reads as stuck rather than inapplicable. The value
-              is remembered and returns with the next upload. */}
-          <input
-            className="input !w-44 shrink-0"
-            placeholder={t('Creator profile')}
-            aria-label={t("Creator profile for uploaded files")}
-            disabled={!hasFiles}
-            title={
-              hasFiles
-                ? 'Files these uploads under this creator in your library and the Creators tab. Leave blank to skip.'
-                : 'For uploaded files only — a downloaded video brings its own channel name'
-            }
-            value={hasFiles ? channel : ''}
-            onChange={(e) => {
-              setChannel(e.target.value)
-              localStorage.setItem('upload-channel', e.target.value)
-            }}
-          />
           {settingsBad && (
             <span className="text-xs text-error ml-auto">{t('Fix the pipeline setting marked in red first.')}</span>
           )}
@@ -1356,7 +1402,10 @@ export default function AddVideos({ onAdded }: { onAdded?: () => void }): JSX.El
           </button>
         </div>
 
-        {wantsWatermark && <BrandingEditor />}
+        {format && <p className="text-sm text-muted">{t('Vertical MP4 · 1080 × 1920 · 9:16')}</p>}
+        <div hidden={!optionsExpanded || !wantsWatermark}>
+          {wantsWatermark && <BrandingEditor />}
+        </div>
       </div>
 
       {full && (
