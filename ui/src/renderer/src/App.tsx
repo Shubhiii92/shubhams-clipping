@@ -22,7 +22,7 @@ import mascot from './assets/mascot.png'
 
 type Page = 'dashboard' | 'queue' | 'watch' | 'studio' | 'creators' | 'marketplace' | 'models' | 'settings'
 
-const GITHUB_URL = 'https://github.com/ColinGPT9/clips-studio'
+const GITHUB_URL = 'https://github.com/Shubhiii92/shubhams-clipping'
 
 const NAV: { id: Page; label: string; icon: string }[] = [
   { id: 'dashboard', label: 'Dashboard', icon: '◧' },
@@ -154,13 +154,9 @@ export default function App(): JSX.Element {
   }
 
   return (
-    <ClipUpdatesProvider><div className="flex h-screen" key={locale}>
+    <ClipUpdatesProvider><div className="clipping-app flex h-screen" key={locale}>
       <ApprovalCards onOpen={videoId => { setStudioTarget({videoId}); setPage('studio') }} />
-      <aside className="w-52 shrink-0 bg-surface border-r border-raised/60 flex flex-col">
-        {/* Same lockup as the website header: Clippy, then the name and
-            tagline stacked beside him. `min-w-0` on the text column so a
-            longer translated tagline wraps instead of pushing Clippy out of
-            the sidebar — several of the 19 locales are wordier than English. */}
+      <header className="clipping-header shrink-0 border-b border-raised">
         <div className="px-5 py-5 flex items-center gap-2.5">
           <img
             src={mascot}
@@ -171,17 +167,18 @@ export default function App(): JSX.Element {
           />
           <div className="min-w-0">
             <h1 className="text-lg font-bold leading-tight">
-              Clips <span className="text-accent">Kitty</span>
+              Shubham’s <span className="text-accent">Clipping</span>
             </h1>
             <p className="text-xs text-muted mt-px">{t('local-first AI clipping')}</p>
           </div>
         </div>
-        <nav className="flex-1 px-3 space-y-1">
+        <nav className="clipping-nav" aria-label={t("Workspace")}>
           {NAV.map((item) => (
             <button
               key={item.id}
               onClick={() => setPage(item.id)}
-              className={`w-full text-left px-3 py-2.5 rounded-lg flex items-center gap-3 transition-colors ${
+              aria-current={page === item.id ? "page" : undefined}
+              className={`whitespace-nowrap px-3 py-2 rounded-lg flex items-center gap-2 transition-colors ${
                 page === item.id
                   ? 'bg-accent/15 text-accent font-medium'
                   : 'text-muted hover:bg-raised hover:text-ink'
@@ -207,8 +204,11 @@ export default function App(): JSX.Element {
         <div className="px-3 pb-1">
           <FeedbackHub />
         </div>
-        <ModelSwitcher />
-        <div className="px-5 py-4 border-t border-raised/60">
+        <details className="clipping-model-menu">
+          <summary className="btn-ghost cursor-pointer text-sm">{t('AI model')}</summary>
+          <div className="clipping-model-picker"><ModelSwitcher /></div>
+        </details>
+        <div className="clipping-source px-5 py-2">
           <a
             href={GITHUB_URL}
             target="_blank"
@@ -226,8 +226,8 @@ export default function App(): JSX.Element {
               : t('AGPL-3.0 · 100% local · no cloud AI')}
           </p>
         </div>
-      </aside>
-      <main className="flex-1 overflow-y-auto flex flex-col">
+      </header>
+      <main className="min-h-0 flex-1 overflow-y-auto flex flex-col">
         <UpdateBanner />
         {page === 'dashboard' && <Dashboard onOpenInStudio={openInStudio} />}
         {page === 'queue' && <Queue onOpenInStudio={(videoId) => openInStudio(videoId)} />}

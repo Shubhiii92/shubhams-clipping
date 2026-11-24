@@ -251,6 +251,9 @@ export default function ClipEditor({
         <button className="btn-ghost" onClick={rerender} disabled={busy !== null}>
           {busy === 'render' ? 'Queueing…' : 'Re-render'}
         </button>
+        <a className="btn-ghost" href={api.downloadClipUrl(clip.id)}>
+          {t('Download MP4')}
+        </a>
         <input
           className="input !w-44"
           value={folder}

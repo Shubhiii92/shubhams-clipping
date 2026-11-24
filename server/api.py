@@ -2222,7 +2222,7 @@ def create_app(config: dict, settings_path: Path) -> FastAPI:
         return {"words": words_in_clip(every, row["start_s"], row["end_s"])}
 
     @app.get("/media/{clip_id}")
-    def media(clip_id: int):
+    def media(clip_id: int, download: bool = False):
         d = db()
         try:
             row = d.get_clip(clip_id)
@@ -2236,7 +2236,12 @@ def create_app(config: dict, settings_path: Path) -> FastAPI:
         # Never from the cache, like the frames: a clip's file can be written
         # again in place (an end card added later), and what the editor shows
         # must be the file as it is now (#147).
-        return FileResponse(path, media_type="video/mp4", headers={"Cache-Control": "no-store"})
+        filename = None
+        if download:
+            filename = f"{_slugify(row['title'] or row['hook'] or path.stem)}.mp4"
+        return FileResponse(
+            path, media_type="video/mp4", filename=filename, headers={"Cache-Control": "no-store"}
+        )
 
     # ---- multilingual publishing (separate pipeline; see multilingual/) ----
 

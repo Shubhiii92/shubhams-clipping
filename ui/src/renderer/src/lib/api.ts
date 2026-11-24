@@ -352,6 +352,7 @@ export const api = {
       body: JSON.stringify({ clip_ids: clipIds, folder })
     }),
   mediaUrl: (clipId: number) => `${API_BASE}/media/${clipId}`,
+  downloadClipUrl: (clipId: number) => `${API_BASE}/media/${clipId}?download=true`,
   clipWords: (clipId: number) => request<{ words: Word[] }>(`/clips/${clipId}/words`),
   previewClip: (
     clipId: number,

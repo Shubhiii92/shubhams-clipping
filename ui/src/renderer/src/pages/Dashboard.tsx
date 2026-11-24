@@ -408,22 +408,21 @@ export default function Dashboard({
   useLayoutEffect(remeasure, [shown.length, poolH, publishUrl, shownAssistantH, expanded])
 
   return (
-    <div className="h-full flex flex-col p-6 gap-4">
-      {/* Pinned top: title + post bar always visible */}
-      <div className="shrink-0 space-y-4">
-        <div className="flex items-center justify-between">
-          <h2 className="text-2xl font-bold">{t('Dashboard')}</h2>
-          {settings && (
-            <span className="bg-raised px-3 py-1.5 rounded-lg text-sm">
-              model: <span className="text-accent font-medium">{settings.model}</span>
-            </span>
-          )}
+    <div className="clipping-dashboard flex flex-col gap-5">
+      <section className="clipping-hero" aria-labelledby="clipping-heading">
+        <p className="clipping-welcome">
+          {t('Welcome to Shubham’s Clipping')}
+        </p>
+        <h2 id="clipping-heading">{t('Turn your best plays')}<br /><span>{t('into shareable clips.')}</span></h2>
+        <p className="clipping-description">
+          {t('Paste a YouTube, Twitch, or Kick link. Find the highlights locally and download Full HD clips with captions.')}
+        </p>
+        <div className="clipping-generator">
+          <AddVideos onAdded={refresh} />
+          <ProcessingBar />
         </div>
-        {/* The same list builder as the Queue page, not a second copy: one
-            video or ten, each with its own options, started when you say so. */}
-        <AddVideos onAdded={refresh} />
-        <ProcessingBar />
-      </div>
+        {settings && <p className="clipping-model">{t('Active model')} · {settings.model}</p>}
+      </section>
 
       {/* Middle: videos + activity, each scrolls on its own */}
       {/* Two tall cards side by side, with the assistant on its own row beneath
@@ -431,8 +430,8 @@ export default function Dashboard({
       {/* One pool of space, split between the cards and the assistant. The
           pool's own height does not depend on where the split falls, which is
           what makes the cap below stable. */}
-      <div ref={poolRef} className="flex-1 min-h-0 flex flex-col gap-5">
-        <div className="flex-1 min-h-0 grid grid-cols-1 xl:grid-cols-2 gap-5">
+      <div ref={poolRef} className="clipping-library flex flex-col gap-5">
+        <div className="clipping-panels grid grid-cols-1 lg:grid-cols-2 gap-5">
         <section
           ref={videosCardRef}
           className="card flex flex-col overflow-hidden"
@@ -571,7 +570,10 @@ export default function Dashboard({
                                   </button>{' '}
                                   <span className="text-muted">
                                     ({Math.round(c.end_s - c.start_s)}s · score {c.score})
-                                  </span>
+                                  </span>{' '}
+                                  <a className="font-semibold text-accent hover:underline" href={api.downloadClipUrl(c.id)}>
+                                    {t('Download MP4')}
+                                  </a>
                                 </li>
                               ))}
                             </ul>
