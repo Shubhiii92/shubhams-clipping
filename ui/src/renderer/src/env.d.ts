@@ -1,3 +1,9 @@
+interface ImportMeta {
+  readonly env: {
+    readonly VITE_DONATION_UPI?: string
+  }
+}
+
 declare module '*.css'
 
 /** Importing an image gives you its URL — Vite copies the file into the
