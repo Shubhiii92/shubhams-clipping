@@ -11,7 +11,8 @@ import { useJobWatch } from '../lib/useJobWatch'
 import { t } from '../lib/i18n'
 import type { Clip, Settings, StudioEvent, Video } from '../lib/types'
 
-const DONATE_URL = 'upi://pay?pa=7058324641%40superyes&pn=Shubham%20Patel&cu=INR'
+const DONATION_UPI = import.meta.env.VITE_DONATION_UPI?.trim()
+const DONATE_URL = DONATION_UPI ? `upi://pay?pa=${encodeURIComponent(DONATION_UPI)}&cu=INR` : ''
 
 // The assistant shares the window with the two cards above it, so its
 // height is the user's call rather than ours. Remembered per machine.
@@ -695,31 +696,33 @@ export default function Dashboard({
             </div>
           )}
 
-          <div
-            className={`card bg-accent/20 border border-accent/40 !py-3 flex flex-col${
-              publishUrl ? '' : ' md:col-span-2'
-            }`}
-          >
-            {/* Same shape as the card opposite: the row fills the card and
-                the button centres on it, so the two buttons stay in line. */}
-            <div className="flex-1 flex items-center justify-between gap-4">
-              <div className="min-w-0 self-start">
-                <p className="font-bold text-lg text-ink">
-                  {t('Support Shubham’s Clipping')}
-                </p>
-                <p className="text-sm text-ink/80 mt-0.5">
-                  {t('Donations help support this clipping project.')}
-                </p>
-                {/* Mirrors the footnote opposite, so both cards read alike. */}
-                <p className="text-xs text-ink/70 mt-1.5">
-                  UPI ID: <code>7058324641@superyes</code>
-                </p>
+          {DONATION_UPI && (
+            <div
+              className={`card bg-accent/20 border border-accent/40 !py-3 flex flex-col${
+                publishUrl ? '' : ' md:col-span-2'
+              }`}
+            >
+              {/* Same shape as the card opposite: the row fills the card and
+                  the button centres on it, so the two buttons stay in line. */}
+              <div className="flex-1 flex items-center justify-between gap-4">
+                <div className="min-w-0 self-start">
+                  <p className="font-bold text-lg text-ink">
+                    {t('Support Shubham’s Clipping')}
+                  </p>
+                  <p className="text-sm text-ink/80 mt-0.5">
+                    {t('Donations help support this clipping project.')}
+                  </p>
+                  {/* Mirrors the footnote opposite, so both cards read alike. */}
+                  <p className="text-xs text-ink/70 mt-1.5">
+                    UPI ID: <code>{DONATION_UPI}</code>
+                  </p>
+                </div>
+                <a href={DONATE_URL} className="btn-accent shrink-0 px-4 py-2 font-semibold">
+                  {t('Donate via UPI')}
+                </a>
               </div>
-              <a href={DONATE_URL} className="btn-accent shrink-0 px-4 py-2 font-semibold">
-                {t('Donate via UPI')}
-              </a>
             </div>
-          </div>
+          )}
         </div>
 
         <div

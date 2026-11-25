@@ -15,7 +15,7 @@ from pathlib import Path
 
 import yaml
 from fastapi import FastAPI, HTTPException, Request
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, HTMLResponse
 from starlette.requests import ClientDisconnect
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -56,7 +56,11 @@ async def set_headers(request, call_next):
 
 @app.get("/")
 async def home():
-    return FileResponse(ASSETS / "index.html")
+    page = (ASSETS / "index.html").read_text()
+    donation = ROOT / "data" / "mac" / "guest-donation.html"
+    if donation.is_file():
+        page = page.replace("</body>", donation.read_text() + "</body>", 1)
+    return HTMLResponse(page)
 
 
 @app.get("/guest.js")
